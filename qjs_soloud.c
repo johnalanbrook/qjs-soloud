@@ -34,26 +34,26 @@ static JSClassDef js_##TYPE##_class = { \
   JS_FreeValue(js, tmp); \
 } \
 
-double js2number(JSContext *js, JSValue v)
+static double js2number(JSContext *js, JSValue v)
 {
   double ret;
   JS_ToFloat64(js, &ret, v);
   return ret;
 }
 
-JSValue number2js(JSContext *js, double num)
+static JSValue number2js(JSContext *js, double num)
 {
   return JS_NewFloat64(js, num);
 }
 
-int js2bool(JSContext *js, JSValue v)
+static int js2bool(JSContext *js, JSValue v)
 {
   int b;
   JS_ToInt32(js, &b, v);
   return b;
 }
 
-JSValue bool2js(JSContext *js, int b)
+static JSValue bool2js(JSContext *js, int b)
 {
   return JS_NewBool(js,b);
 }
@@ -189,11 +189,19 @@ JSValue TYPE##_proto = JS_NewObject(js); \
 JS_SetPropertyFunctionList(js, TYPE##_proto, js_##TYPE##_funcs, countof(js_##TYPE##_funcs)); \
 JS_SetClassProto(js, js_##TYPE##_class_id, TYPE##_proto); \
 
-static int js_soloud_init(JSContext *js, JSModuleDef *m) {
-  JS_SetModuleExportList(js, m, js_soloud_funcs, sizeof(js_soloud_funcs)/sizeof(JSCFunctionListEntry));
+JSValue js_soloud_use(JSContext *js)
+{
   INITCLASS(Wav)
   INITCLASS(voice)
   INITCLASS(Bus)
+  JSValue export = JS_NewObject(js);
+  JS_SetPropertyFunctionList(js, export, js_soloud_funcs, sizeof(js_soloud_funcs)/sizeof(JSCFunctionListEntry));
+  return export;
+}
+
+static int js_soloud_init(JSContext *js, JSModuleDef *m) {
+  js_soloud_use(js);
+  JS_SetModuleExportList(js, m, js_soloud_funcs, sizeof(js_soloud_funcs)/sizeof(JSCFunctionListEntry));
   return 0;
 }
 
@@ -204,8 +212,8 @@ static int js_soloud_init(JSContext *js, JSModuleDef *m) {
 #endif
 
 JSModuleDef *JS_INIT_MODULE(JSContext *ctx, const char *module_name) {
-    JSModuleDef *m = JS_NewCModule(ctx, module_name, js_soloud_init);
-    if (!m) return NULL;
-    JS_AddModuleExportList(ctx, m, js_soloud_funcs, sizeof(js_soloud_funcs)/sizeof(JSCFunctionListEntry));
-    return m;
+  JSModuleDef *m = JS_NewCModule(ctx, module_name, js_soloud_init);
+  if (!m) return NULL;
+  JS_AddModuleExportList(ctx, m, js_soloud_funcs, sizeof(js_soloud_funcs)/sizeof(JSCFunctionListEntry));
+  return m;
 }
