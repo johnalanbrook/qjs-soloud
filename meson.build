@@ -1,10 +1,5 @@
 project('qjs-soloud', 'c')
 
-libtype = get_option('default_library')
-if libtype == 'shared'
-  add_project_arguments('-DJS_SHARED_LIBRARY', language:'c')
-endif
-
 quickjs = dependency('quickjs', static:true)
 soloud = dependency('soloud', static:true)
 
@@ -17,8 +12,7 @@ endif
 qjs_soloud_lib = library('soloud',
   sources: 'qjs_soloud.c',
   dependencies: [quickjs, soloud] + deps,
-  name_suffix: 'so',
-  name_prefix: '',
+  c_shared_args: '-DJS_SHARED_LIBRARY',  
 )
 
 qjs_soloud_dep = declare_dependency(
