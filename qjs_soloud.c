@@ -69,7 +69,7 @@ JSCLASS(Bus, Bus_destroy)
 static JSValue js_soloud_make(JSContext *js, JSValue self, int argc, JSValue *argv)
 {
   soloud = Soloud_create();
-  Soloud_initEx(soloud, SOLOUD_CLIP_ROUNDOFF, SOLOUD_AUTO, js2number(js, argv[0]), js2number(js,argv[2]), js2number(js,argv[1]));
+  Soloud_initEx(soloud, SOLOUD_CLIP_ROUNDOFF, SOLOUD_AUTO, SOLOUD_AUTO, SOLOUD_AUTO, SOLOUD_AUTO);
   JSValue obj = JS_NewObject(js);
   JS_SetPropertyStr(js, obj, "channels", JS_NewFloat64(js, Soloud_getBackendChannels(soloud)));
   JS_SetPropertyStr(js, obj, "samplerate", JS_NewFloat64(js, Soloud_getBackendSamplerate(soloud)));
@@ -93,15 +93,20 @@ static JSValue js_soloud_mix(JSContext *js, JSValue self, int argc, JSValue *arg
   return JS_UNDEFINED;
 }
 
+// Create a voice from a WAV file
 static JSValue js_load_wav_mem(JSContext *js, JSValue self, int argc, JSValue *argv)
 {
   size_t len;
   void *data = JS_GetArrayBuffer(js, &len, argv[0]);
   Wav *wav = Wav_create();
-  Wav_loadMemEx(wav, data, len, 1, 1);
+  if (Wav_loadMemEx(wav, data, len, 1, 1)) {
+    Wav_destroy(wav);
+    return JS_ThrowReferenceError(js, "buffer data not wav data");
+  }
   return Wav2js(js, wav);
 }
 
+// Create a voice from pure PWM data
 static JSValue js_load_pwm(JSContext *js, JSValue self, int argc, JSValue *argv)
 {
   size_t len;
@@ -111,12 +116,20 @@ static JSValue js_load_pwm(JSContext *js, JSValue self, int argc, JSValue *argv)
   return Wav2js(js, wav);
 }
 
+static JSValue js_soloud_profile(JSContext *js, JSValue self, int argc, JSValue *argv)
+{
+  JSValue prof = JS_NewObject(js);
+  JS_SetPropertyStr(js, prof, "active_voices", JS_NewFloat64(js, Soloud_getActiveVoiceCount(soloud)));
+  JS_SetPropertyStr(js, prof, "voices", JS_NewFloat64(js, Soloud_getVoiceCount(soloud)));
+}
+
 static const JSCFunctionListEntry js_soloud_funcs[] = {
-  JS_CFUNC_DEF("init", 2, js_soloud_make),
+  JS_CFUNC_DEF("init", 3, js_soloud_make),
   JS_CFUNC_DEF("mix", 1, js_soloud_mix),
   JS_CFUNC_DEF("load_pwm", 3, js_load_pwm),
   JS_CFUNC_DEF("load_wav_mem", 1, js_load_wav_mem),
   JS_CFUNC_DEF("play", 1, js_soloud_play),
+  JS_CFUNC_DEF("profile", 0, js_soloud_profile),
 };
 
 static const JSCFunctionListEntry js_Wav_funcs[] = {
@@ -173,7 +186,7 @@ static const JSCFunctionListEntry js_voice_funcs[] = {
   JS_CGETSET_DEF("samplerate", js_voice_get_Samplerate, js_voice_set_Samplerate),
   JS_CGETSET_DEF("relativePlaySpeed", js_voice_get_RelativePlaySpeed, js_voice_set_RelativePlaySpeed),
   JS_CGETSET_DEF("loopPoint", js_voice_get_LoopPoint, js_voice_set_LoopPoint),
-  JS_CGETSET_DEF("looping", js_voice_get_Looping, js_voice_set_Looping),
+  JS_CGETSET_DEF("loop", js_voice_get_Looping, js_voice_set_Looping),
   JS_CGETSET_DEF("autoStop", js_voice_get_AutoStop, js_voice_set_AutoStop),
   JS_CGETSET_DEF("protect", js_voice_get_ProtectVoice, js_voice_set_ProtectVoice),    
 };
